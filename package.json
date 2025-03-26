@@ -1,0 +1,43 @@
+{
+  "name": "renegade-sdk",
+  "version": "0.1.0",
+  "description": "A TypeScript client for interacting with the Renegade Darkpool API",
+  "module": "index.ts",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "update-version": "bash scripts/update-version.sh",
+    "prepublishOnly": "npm run update-version && npm run build"
+  },
+  "keywords": [
+    "renegade",
+    "darkpool",
+    "trading",
+    "api",
+    "client",
+    "cryptocurrency",
+    "defi"
+  ],
+  "author": "Renegade",
+  "license": "MIT",
+  "dependencies": {
+    "@noble/hashes": "^1.7.1",
+    "axios": "^1.8.4",
+    "json-bigint": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/json-bigint": "^1.0.4",
+    "typescript": "^5",
+    "viem": "^2.23.15"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/renegade-fi/typescript-external-match-client"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
