@@ -24,7 +24,6 @@
   "license": "MIT",
   "dependencies": {
     "@noble/hashes": "^1.7.1",
-    "axios": "^1.8.4",
     "json-bigint": "^1.0.0"
   },
   "devDependencies": {

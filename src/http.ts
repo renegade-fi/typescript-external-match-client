@@ -3,8 +3,6 @@
  * This client handles request signing and authentication using HMAC-SHA256.
  */
 
-import axios from 'axios';
-import type { AxiosInstance, AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig, AxiosRequestHeaders } from 'axios';
 import { sha256 } from '@noble/hashes/sha256';
 import { hmac } from '@noble/hashes/hmac';
 import { bytesToHex } from '@noble/hashes/utils';
@@ -44,9 +42,21 @@ export const stringifyBigJSON = (data: any) => {
     return jsonProcessor.stringify(data);
 };
 
+// Define interface for HTTP response similar to Axios response
+export interface HttpResponse<T = any> {
+    data: T;
+    status: number;
+    statusText: string;
+    headers: Record<string, string>;
+}
+
+/**
+ * HTTP client for making authenticated requests to the Renegade relayer API.  
+ */
 export class RelayerHttpClient {
-    private client: AxiosInstance;
+    private baseUrl: string;
     private authKey: Uint8Array;
+    private defaultHeaders: Record<string, string>;
 
     /**
      * Initialize a new RelayerHttpClient.
@@ -55,35 +65,11 @@ export class RelayerHttpClient {
      * @param authKey The base64-encoded authentication key for request signing
      */
     constructor(baseUrl: string, authKey: string) {
-        this.client = axios.create({
-            baseURL: baseUrl,
-            transformRequest: [(data) => {
-                // Use JSON-BigInt for stringifying request data
-                if (data && typeof data === 'object') {
-                    return stringifyBigJSON(data);
-                }
-                return data;
-            }],
-            transformResponse: [(data) => {
-                // Use JSON-BigInt for parsing response data
-                if (typeof data === 'string') {
-                    return parseBigJSON(data);
-                }
-                return data;
-            }],
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        });
-
-        // Decode base64 auth key
+        this.baseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
         this.authKey = this.decodeBase64(authKey);
-
-        // Add request interceptor for authentication
-        this.client.interceptors.request.use(
-            this.addAuthInterceptor.bind(this),
-            (error) => Promise.reject(error)
-        );
+        this.defaultHeaders = {
+            'Content-Type': 'application/json'
+        };
     }
 
     /**
@@ -93,8 +79,8 @@ export class RelayerHttpClient {
      * @param headers Additional headers to include
      * @returns The API response
      */
-    public async get<T>(path: string, headers: Record<string, string> = {}): Promise<AxiosResponse<T>> {
-        return this.client.get<T>(path, { headers });
+    public async get<T>(path: string, headers: Record<string, string> = {}): Promise<HttpResponse<T>> {
+        return this.request<T>('GET', path, undefined, headers);
     }
 
     /**
@@ -105,56 +91,135 @@ export class RelayerHttpClient {
      * @param headers Additional headers to include
      * @returns The API response
      */
-    public async post<T, D = any>(path: string, data: D, headers: Record<string, string> = {}): Promise<AxiosResponse<T>> {
-        return this.client.post<T>(path, data, { headers });
+    public async post<T, D = any>(path: string, data: D, headers: Record<string, string> = {}): Promise<HttpResponse<T>> {
+        return this.request<T>('POST', path, data, headers);
+    }
+
+    /**
+     * Make an HTTP request with authentication.
+     * 
+     * @param method The HTTP method
+     * @param path The API endpoint path
+     * @param data The request body data
+     * @param customHeaders Additional headers to include
+     * @returns The API response
+     */
+    private async request<T>(
+        method: string,
+        path: string,
+        data?: any,
+        customHeaders: Record<string, string> = {}
+    ): Promise<HttpResponse<T>> {
+        const urlPath = path.startsWith('/') ? path.slice(1) : path;
+        const url = new URL(urlPath, this.baseUrl);
+
+        // Prepare headers, and add authentication headers
+        const headers = { ...this.defaultHeaders, ...customHeaders };
+        const fullHeaders = this.addAuthHeaders(
+            url.pathname + url.search,
+            headers,
+            data
+        );
+
+        // Prepare request body
+        let body: string | undefined;
+        if (data) {
+            body = typeof data === 'string' ? data : stringifyBigJSON(data);
+        }
+
+        // Make the fetch request
+        const response = await fetch(url.toString(), {
+            method,
+            headers: fullHeaders,
+            body
+        });
+
+        // Read the response body
+        let responseData: any;
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+            const text = await response.text();
+            responseData = parseBigJSON(text);
+        } else {
+            responseData = await response.text();
+        }
+
+        // Convert headers to a simple object
+        const responseHeaders: Record<string, string> = {};
+        response.headers.forEach((value, key) => {
+            responseHeaders[key] = value;
+        });
+
+        // Return a response object similar to Axios response
+        return {
+            data: responseData,
+            status: response.status,
+            statusText: response.statusText,
+            headers: responseHeaders
+        };
     }
 
     /**
      * Add authentication headers to a request.
      */
-    private addAuthInterceptor(config: InternalAxiosRequestConfig): InternalAxiosRequestConfig {
-        // Create headers if they don't exist
-        if (!config.headers) {
-            config.headers = axios.defaults.headers.common as AxiosRequestHeaders;
-        }
-
+    private addAuthHeaders(
+        path: string,
+        headers: Record<string, string>,
+        data?: any
+    ): Record<string, string> {
         // Add timestamp and expiry
         const timestamp = Date.now();
         const expiry = timestamp + REQUEST_SIGNATURE_DURATION_MS;
-        config.headers[RENEGADE_AUTH_EXPIRATION_HEADER] = expiry.toString();
+        headers[RENEGADE_AUTH_EXPIRATION_HEADER] = expiry.toString();
 
-        // Calculate signature
+        // Compute the MAC signature and 
+        const macDigest = this.computeRequestMac(path, headers, data);
+        headers[RENEGADE_AUTH_HEADER] = this.encodeBase64(Buffer.from(macDigest));
+        return headers;
+    }
+
+    /**
+     * Compute the HMAC-SHA256 MAC for a request.
+     * 
+     * @param path The API endpoint path with query parameters
+     * @param headers The request headers
+     * @param data The request body data
+     * @returns The computed MAC digest
+     */
+    private computeRequestMac(
+        path: string,
+        headers: Record<string, string>,
+        data?: any
+    ): Uint8Array {
+        // Initialize MAC with auth key
         const mac = hmac.create(sha256, this.authKey);
 
-        // Get the full path including query params (url is already relative to baseUrl)
-        const fullPath = config.url || '';
-        const pathBytes = new TextEncoder().encode(fullPath);
+        // Add path to signature
+        const pathBytes = new TextEncoder().encode(path);
         mac.update(pathBytes);
 
-        // Add Renegade headers
-        const headers = Object.entries(config.headers)
+        // Add Renegade headers to signature
+        const renegadeHeaders = Object.entries(headers)
             .filter(([key]) => key.toLowerCase().startsWith(RENEGADE_HEADER_PREFIX))
             .filter(([key]) => key.toLowerCase() !== RENEGADE_AUTH_HEADER.toLowerCase())
             .sort(([a], [b]) => a.localeCompare(b));
 
-        for (const [key, value] of headers) {
+        for (const [key, value] of renegadeHeaders) {
             mac.update(new TextEncoder().encode(key));
             mac.update(new TextEncoder().encode(value.toString()));
         }
 
-        // Add body - use the same stringification as the request will use
+        // Add body to signature
         let body = '';
-        if (config.data) {
-            body = typeof config.data === 'string'
-                ? config.data
-                : stringifyBigJSON(config.data);
+        if (data) {
+            body = typeof data === 'string'
+                ? data
+                : stringifyBigJSON(data);
         }
         mac.update(new TextEncoder().encode(body));
 
-        // Set signature header
-        config.headers[RENEGADE_AUTH_HEADER] = this.encodeBase64(Buffer.from(mac.digest()));
-
-        return config;
+        // Return the digest
+        return mac.digest();
     }
 
     /**

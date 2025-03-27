@@ -87,19 +87,17 @@ export class RequestQuoteOptions {
      * Build the request path with query parameters.
      */
     buildRequestPath(): string {
-        const disableSponsorshipStr = this.disableGasSponsorship.toString();
-        let path = `${REQUEST_EXTERNAL_QUOTE_ROUTE}?${DISABLE_GAS_SPONSORSHIP_QUERY_PARAM}=${disableSponsorshipStr}`;
-
+        const params = new URLSearchParams();
+        params.set(DISABLE_GAS_SPONSORSHIP_QUERY_PARAM, this.disableGasSponsorship.toString());
         if (this.gasRefundAddress) {
-            path += `&${GAS_REFUND_ADDRESS_QUERY_PARAM}=${this.gasRefundAddress}`;
+            params.set(GAS_REFUND_ADDRESS_QUERY_PARAM, this.gasRefundAddress);
         }
 
         if (this.refundNativeEth) {
-            const refundNativeEthStr = this.refundNativeEth.toString();
-            path += `&${REFUND_NATIVE_ETH_QUERY_PARAM}=${refundNativeEthStr}`;
+            params.set(REFUND_NATIVE_ETH_QUERY_PARAM, this.refundNativeEth.toString());
         }
 
-        return path;
+        return `${REQUEST_EXTERNAL_QUOTE_ROUTE}?${params.toString()}`;
     }
 }
 
@@ -166,23 +164,22 @@ export class AssembleExternalMatchOptions {
      * Build the request path with query parameters.
      */
     buildRequestPath(): string {
-        let path = ASSEMBLE_EXTERNAL_MATCH_ROUTE;
+        // If no query parameters are needed, return the base path
+        if (!this.requestGasSponsorship && !this.gasRefundAddress) {
+            return ASSEMBLE_EXTERNAL_MATCH_ROUTE;
+        }
 
+        const params = new URLSearchParams();
         if (this.requestGasSponsorship) {
-            // We only write this query parameter if it was explicitly set. The
-            // expectation of the auth server is that when gas sponsorship is
-            // requested at the quote stage, there should be no query parameters
-            // at all in the assemble request.
-            const disableSponsorshipStr = (!this.requestGasSponsorship).toString();
-            path += `?${DISABLE_GAS_SPONSORSHIP_QUERY_PARAM}=${disableSponsorshipStr}`;
+            // We only write this query parameter if it was explicitly set
+            params.set(DISABLE_GAS_SPONSORSHIP_QUERY_PARAM, (!this.requestGasSponsorship).toString());
         }
 
         if (this.gasRefundAddress) {
-            path += path.includes('?') ? '&' : '?';
-            path += `${GAS_REFUND_ADDRESS_QUERY_PARAM}=${this.gasRefundAddress}`;
+            params.set(GAS_REFUND_ADDRESS_QUERY_PARAM, this.gasRefundAddress);
         }
 
-        return path;
+        return `${ASSEMBLE_EXTERNAL_MATCH_ROUTE}?${params.toString()}`;
     }
 }
 
@@ -272,7 +269,9 @@ export class ExternalMatchClient {
 
         try {
             const response = await this.httpClient.post<ExternalQuoteResponse>(path, request, headers);
-            if (!response.data) {
+
+            // Handle 204 No Content (no quotes available)
+            if (response.status === 204 || !response.data) {
                 return null;
             }
 
@@ -285,13 +284,14 @@ export class ExternalMatchClient {
 
             return signedQuote;
         } catch (error: any) {
-            if (error.response && error.response.status === 204) {
+            // Handle HTTP-related errors from fetch implementation
+            if (error.status === 204) {
                 return null;
             }
 
             throw new ExternalMatchClientError(
-                error.response?.data || error.message,
-                error.response?.status
+                error.message || 'Failed to request quote',
+                error.status
             );
         }
     }
@@ -337,15 +337,22 @@ export class ExternalMatchClient {
 
         try {
             const response = await this.httpClient.post<ExternalMatchResponse>(path, request, headers);
+
+            // Handle 204 No Content
+            if (response.status === 204 || !response.data) {
+                return null;
+            }
+
             return response.data;
         } catch (error: any) {
-            if (error.response && error.response.status === 204) {
+            // Handle HTTP-related errors from fetch implementation
+            if (error.status === 204) {
                 return null;
             }
 
             throw new ExternalMatchClientError(
-                error.response?.data || error.message,
-                error.response?.status
+                error.message || 'Failed to assemble quote',
+                error.status
             );
         }
     }

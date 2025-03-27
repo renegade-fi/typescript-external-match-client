@@ -63,7 +63,6 @@ const order: ExternalOrder = {
  */
 async function submitTransaction(settlementTx: any): Promise<`0x${string}`> {
     console.log('Submitting transaction...');
-    console.log('Transaction details:', settlementTx);
 
     const tx = await walletClient.sendTransaction({
         to: settlementTx.to as `0x${string}`,
