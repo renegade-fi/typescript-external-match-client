@@ -329,7 +329,6 @@ export class ExternalMatchClient {
             receiver_address: options.receiverAddress,
             signed_quote: signedQuote,
             updated_order: options.updatedOrder,
-            gas_sponsorship_info: quote.gas_sponsorship_info,
         };
 
         const path = options.buildRequestPath();
