@@ -102,7 +102,6 @@ export interface AssembleExternalMatchRequest {
     receiver_address?: string;
     signed_quote: ApiSignedExternalQuote;
     updated_order?: ExternalOrder;
-    gas_sponsorship_info?: SignedGasSponsorshipInfo;
 }
 
 export interface ExternalMatchResponse {
