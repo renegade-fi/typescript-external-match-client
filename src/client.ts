@@ -106,6 +106,7 @@ export class RequestQuoteOptions {
  */
 export class AssembleExternalMatchOptions {
     doGasEstimation: boolean = false;
+    allowShared: boolean = false;
     receiverAddress?: string;
     updatedOrder?: ExternalOrder;
     requestGasSponsorship: boolean = false;
@@ -123,6 +124,14 @@ export class AssembleExternalMatchOptions {
      */
     withGasEstimation(doGasEstimation: boolean): AssembleExternalMatchOptions {
         this.doGasEstimation = doGasEstimation;
+        return this;
+    }
+
+    /**
+     * Set whether to allow shared gas sponsorship.
+     */
+    withAllowShared(allowShared: boolean): AssembleExternalMatchOptions {
+        this.allowShared = allowShared;
         return this;
     }
 
@@ -326,6 +335,7 @@ export class ExternalMatchClient {
 
         const request: AssembleExternalMatchRequest = {
             do_gas_estimation: options.doGasEstimation,
+            allow_shared: options.allowShared,
             receiver_address: options.receiverAddress,
             signed_quote: signedQuote,
             updated_order: options.updatedOrder,
