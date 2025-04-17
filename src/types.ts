@@ -99,6 +99,7 @@ export interface ExternalQuoteResponse {
 
 export interface AssembleExternalMatchRequest {
     do_gas_estimation?: boolean;
+    allow_shared?: boolean;
     receiver_address?: string;
     signed_quote: ApiSignedExternalQuote;
     updated_order?: ExternalOrder;
