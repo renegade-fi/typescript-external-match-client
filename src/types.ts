@@ -109,4 +109,16 @@ export interface ExternalMatchResponse {
     match_bundle: AtomicMatchApiBundle;
     gas_sponsored: boolean;
     gas_sponsorship_info?: GasSponsorshipInfo;
+}
+
+export interface DepthSideInfo {
+    total_quantity: bigint;
+    total_quantity_usd: number;
+}
+
+export interface OrderBookDepth {
+    price: number;
+    timestamp: number;
+    buy: DepthSideInfo;
+    sell: DepthSideInfo;
 } 

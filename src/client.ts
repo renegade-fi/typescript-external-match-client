@@ -15,7 +15,8 @@ import type {
     AssembleExternalMatchRequest,
     ExternalMatchResponse,
     ApiSignedExternalQuote,
-    AtomicMatchApiBundle
+    AtomicMatchApiBundle,
+    OrderBookDepth
 } from './types';
 
 // Constants for API URLs
@@ -29,6 +30,7 @@ const RENEGADE_SDK_VERSION_HEADER = "x-renegade-sdk-version";
 // API Routes
 const REQUEST_EXTERNAL_QUOTE_ROUTE = "/v0/matching-engine/quote";
 const ASSEMBLE_EXTERNAL_MATCH_ROUTE = "/v0/matching-engine/assemble-external-match";
+const ORDER_BOOK_DEPTH_ROUTE = "/v0/order_book/depth";
 
 // Query Parameters
 const DISABLE_GAS_SPONSORSHIP_QUERY_PARAM = "disable_gas_sponsorship";
@@ -361,6 +363,34 @@ export class ExternalMatchClient {
 
             throw new ExternalMatchClientError(
                 error.message || 'Failed to assemble quote',
+                error.status
+            );
+        }
+    }
+
+    /**
+     * Get order book depth for a given base token mint.
+     * 
+     * @param mint The base token mint address
+     * @returns A promise that resolves to the order book depth
+     * @throws ExternalMatchClientError if the request fails
+     */
+    async getOrderBookDepth(mint: string): Promise<OrderBookDepth> {
+        const path = `${ORDER_BOOK_DEPTH_ROUTE}/${mint}`;
+        const headers = this.getHeaders();
+
+        try {
+            const response = await this.httpClient.get<OrderBookDepth>(path, headers);
+            if (response.status !== 200 || !response.data) {
+                throw new ExternalMatchClientError(
+                    'Failed to get order book depth',
+                    response.status
+                );
+            }
+            return response.data;
+        } catch (error: any) {
+            throw new ExternalMatchClientError(
+                error.message || 'Failed to get order book depth',
                 error.status
             );
         }

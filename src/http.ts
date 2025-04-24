@@ -27,7 +27,12 @@ const jsonProcessor = JSONBigInt({
  */
 export const parseBigJSON = (data: string) => {
     try {
-        return jsonProcessor.parse(data);
+        return JSON.parse(data, (key, value) => {
+            if (typeof value === 'string' && /^-?\d+$/.test(value)) {
+                return BigInt(value);
+            }
+            return value;
+        });
     } catch (error) {
         // If parsing fails, return original data
         console.error('Failed to parse JSON with BigInt', error);
