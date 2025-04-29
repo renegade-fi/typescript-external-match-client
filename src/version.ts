@@ -4,4 +4,4 @@
  * Last updated: 2025-04-17T02:29:21Z
  */
 
-export const VERSION = '0.1.2';
+export const VERSION = "0.1.2";

@@ -1,0 +1,44 @@
+{
+    "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+    "files": {
+        "ignore": [
+            "CHANGELOG.md",
+            "pnpm-lock.yaml",
+            "package.json",
+            "tsconfig.base.json",
+            "wasm/**",
+            "dist/**",
+            "renegade-utils/**",
+            "*.d.ts"
+        ]
+    },
+    "formatter": {
+        "indentStyle": "space",
+        "indentWidth": 4,
+        "lineWidth": 100
+    },
+    "linter": {
+        "rules": {
+            "recommended": true,
+            "correctness": {
+                "noUnusedVariables": "error",
+                "useExhaustiveDependencies": "error",
+                "noUnusedImports": "error"
+            },
+            "style": {
+                "useShorthandArrayType": "error"
+            },
+            "suspicious": {
+                "noExplicitAny": "off"
+            }
+        }
+    },
+    "organizeImports": {
+        "enabled": true
+    },
+    "vcs": {
+        "enabled": true,
+        "clientKind": "git",
+        "useIgnoreFile": true
+    }
+}

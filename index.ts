@@ -4,7 +4,12 @@
  */
 
 // Export main client
-export { ExternalMatchClient, ExternalMatchClientError, RequestQuoteOptions, AssembleExternalMatchOptions } from './src/client';
+export {
+    ExternalMatchClient,
+    ExternalMatchClientError,
+    RequestQuoteOptions,
+    AssembleExternalMatchOptions,
+} from "./src/client";
 
 // Export types
 export type {
@@ -23,8 +28,8 @@ export type {
     ExternalQuoteRequest,
     ExternalQuoteResponse,
     AssembleExternalMatchRequest,
-    ExternalMatchResponse
-} from './src/types';
+    ExternalMatchResponse,
+} from "./src/types";
 
 // Export enums
-export { OrderSide } from './src/types';
+export { OrderSide } from "./src/types";

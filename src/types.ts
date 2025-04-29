@@ -121,4 +121,4 @@ export interface OrderBookDepth {
     timestamp: number;
     buy: DepthSideInfo;
     sell: DepthSideInfo;
-} 
+}
