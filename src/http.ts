@@ -3,15 +3,14 @@
  * This client handles request signing and authentication using HMAC-SHA256.
  */
 
-import { sha256 } from '@noble/hashes/sha256';
-import { hmac } from '@noble/hashes/hmac';
-import { bytesToHex } from '@noble/hashes/utils';
-import JSONBigInt from 'json-bigint';
+import { hmac } from "@noble/hashes/hmac";
+import { sha256 } from "@noble/hashes/sha256";
+import JSONBigInt from "json-bigint";
 
 // Constants for authentication
-export const RENEGADE_HEADER_PREFIX = 'x-renegade';
-export const RENEGADE_AUTH_HEADER = 'x-renegade-auth';
-export const RENEGADE_AUTH_EXPIRATION_HEADER = 'x-renegade-auth-expiration';
+export const RENEGADE_HEADER_PREFIX = "x-renegade";
+export const RENEGADE_AUTH_HEADER = "x-renegade-auth";
+export const RENEGADE_AUTH_EXPIRATION_HEADER = "x-renegade-auth-expiration";
 
 // Authentication constants
 const REQUEST_SIGNATURE_DURATION_MS = 10 * 1000; // 10 seconds in milliseconds
@@ -27,15 +26,15 @@ const jsonProcessor = JSONBigInt({
  */
 export const parseBigJSON = (data: string) => {
     try {
-        return JSON.parse(data, (key, value) => {
-            if (typeof value === 'string' && /^-?\d+$/.test(value)) {
+        return JSON.parse(data, (_key, value) => {
+            if (typeof value === "string" && /^-?\d+$/.test(value)) {
                 return BigInt(value);
             }
             return value;
         });
     } catch (error) {
         // If parsing fails, return original data
-        console.error('Failed to parse JSON with BigInt', error);
+        console.error("Failed to parse JSON with BigInt", error);
         return data;
     }
 };
@@ -56,7 +55,7 @@ export interface HttpResponse<T = any> {
 }
 
 /**
- * HTTP client for making authenticated requests to the Renegade relayer API.  
+ * HTTP client for making authenticated requests to the Renegade relayer API.
  */
 export class RelayerHttpClient {
     private baseUrl: string;
@@ -65,44 +64,51 @@ export class RelayerHttpClient {
 
     /**
      * Initialize a new RelayerHttpClient.
-     * 
+     *
      * @param baseUrl The base URL of the relayer API
      * @param authKey The base64-encoded authentication key for request signing
      */
     constructor(baseUrl: string, authKey: string) {
-        this.baseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+        this.baseUrl = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
         this.authKey = this.decodeBase64(authKey);
         this.defaultHeaders = {
-            'Content-Type': 'application/json'
+            "Content-Type": "application/json",
         };
     }
 
     /**
      * Make a GET request with custom headers.
-     * 
+     *
      * @param path The API endpoint path
      * @param headers Additional headers to include
      * @returns The API response
      */
-    public async get<T>(path: string, headers: Record<string, string> = {}): Promise<HttpResponse<T>> {
-        return this.request<T>('GET', path, undefined, headers);
+    public async get<T>(
+        path: string,
+        headers: Record<string, string> = {},
+    ): Promise<HttpResponse<T>> {
+        return this.request<T>("GET", path, undefined, headers);
     }
 
     /**
      * Make a POST request with custom headers.
-     * 
+     *
      * @param path The API endpoint path
      * @param data The request body to send
      * @param headers Additional headers to include
      * @returns The API response
      */
-    public async post<T, D = any>(path: string, data: D, headers: Record<string, string> = {}): Promise<HttpResponse<T>> {
-        return this.request<T>('POST', path, data, headers);
+    public async post<T, D = any>(
+        path: string,
+        data: D,
+        headers: Record<string, string> = {},
+    ): Promise<HttpResponse<T>> {
+        return this.request<T>("POST", path, data, headers);
     }
 
     /**
      * Make an HTTP request with authentication.
-     * 
+     *
      * @param method The HTTP method
      * @param path The API endpoint path
      * @param data The request body data
@@ -113,36 +119,32 @@ export class RelayerHttpClient {
         method: string,
         path: string,
         data?: any,
-        customHeaders: Record<string, string> = {}
+        customHeaders: Record<string, string> = {},
     ): Promise<HttpResponse<T>> {
-        const urlPath = path.startsWith('/') ? path.slice(1) : path;
+        const urlPath = path.startsWith("/") ? path.slice(1) : path;
         const url = new URL(urlPath, this.baseUrl);
 
         // Prepare headers, and add authentication headers
         const headers = { ...this.defaultHeaders, ...customHeaders };
-        const fullHeaders = this.addAuthHeaders(
-            url.pathname + url.search,
-            headers,
-            data
-        );
+        const fullHeaders = this.addAuthHeaders(url.pathname + url.search, headers, data);
 
         // Prepare request body
         let body: string | undefined;
         if (data) {
-            body = typeof data === 'string' ? data : stringifyBigJSON(data);
+            body = typeof data === "string" ? data : stringifyBigJSON(data);
         }
 
         // Make the fetch request
         const response = await fetch(url.toString(), {
             method,
             headers: fullHeaders,
-            body
+            body,
         });
 
         // Read the response body
         let responseData: any;
-        const contentType = response.headers.get('content-type') || '';
-        if (contentType.includes('application/json')) {
+        const contentType = response.headers.get("content-type") || "";
+        if (contentType.includes("application/json")) {
             const text = await response.text();
             responseData = parseBigJSON(text);
         } else {
@@ -160,7 +162,7 @@ export class RelayerHttpClient {
             data: responseData,
             status: response.status,
             statusText: response.statusText,
-            headers: responseHeaders
+            headers: responseHeaders,
         };
     }
 
@@ -170,14 +172,14 @@ export class RelayerHttpClient {
     private addAuthHeaders(
         path: string,
         headers: Record<string, string>,
-        data?: any
+        data?: any,
     ): Record<string, string> {
         // Add timestamp and expiry
         const timestamp = Date.now();
         const expiry = timestamp + REQUEST_SIGNATURE_DURATION_MS;
         headers[RENEGADE_AUTH_EXPIRATION_HEADER] = expiry.toString();
 
-        // Compute the MAC signature and 
+        // Compute the MAC signature and
         const macDigest = this.computeRequestMac(path, headers, data);
         headers[RENEGADE_AUTH_HEADER] = this.encodeBase64(Buffer.from(macDigest));
         return headers;
@@ -185,7 +187,7 @@ export class RelayerHttpClient {
 
     /**
      * Compute the HMAC-SHA256 MAC for a request.
-     * 
+     *
      * @param path The API endpoint path with query parameters
      * @param headers The request headers
      * @param data The request body data
@@ -194,7 +196,7 @@ export class RelayerHttpClient {
     private computeRequestMac(
         path: string,
         headers: Record<string, string>,
-        data?: any
+        data?: any,
     ): Uint8Array {
         // Initialize MAC with auth key
         const mac = hmac.create(sha256, this.authKey);
@@ -215,11 +217,9 @@ export class RelayerHttpClient {
         }
 
         // Add body to signature
-        let body = '';
+        let body = "";
         if (data) {
-            body = typeof data === 'string'
-                ? data
-                : stringifyBigJSON(data);
+            body = typeof data === "string" ? data : stringifyBigJSON(data);
         }
         mac.update(new TextEncoder().encode(body));
 
@@ -231,13 +231,13 @@ export class RelayerHttpClient {
      * Decode a base64 string to a Uint8Array.
      */
     private decodeBase64(base64: string): Uint8Array {
-        return Buffer.from(base64, 'base64');
+        return Buffer.from(base64, "base64");
     }
 
     /**
      * Encode a Uint8Array or Buffer to a base64 string.
      */
     private encodeBase64(data: Uint8Array | Buffer): string {
-        return Buffer.from(data).toString('base64').replace(/=+$/, '');
+        return Buffer.from(data).toString("base64").replace(/=+$/, "");
     }
-} 
+}

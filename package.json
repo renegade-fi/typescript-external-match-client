@@ -9,7 +9,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "update-version": "bash scripts/update-version.sh",
-    "prepublishOnly": "npm run update-version && npm run build"
+    "prepublishOnly": "npm run update-version && npm run build",
+    "check": "biome check --write ."
   },
   "keywords": [
     "renegade",
@@ -27,6 +28,7 @@
     "json-bigint": "^1.0.0"
   },
   "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
     "@types/bun": "latest",
     "@types/json-bigint": "^1.0.4",
     "typescript": "^5",

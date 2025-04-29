@@ -1,23 +1,22 @@
 /**
  * Client for interacting with the Renegade external matching API.
- * 
+ *
  * This client handles authentication and provides methods for requesting quotes,
  * assembling matches, and executing trades.
  */
 
-import { RelayerHttpClient, RENEGADE_HEADER_PREFIX } from './http';
-import { VERSION } from './version';
+import { RelayerHttpClient } from "./http";
 import type {
-    ExternalOrder,
-    SignedExternalQuote,
-    ExternalQuoteRequest,
-    ExternalQuoteResponse,
+    ApiSignedExternalQuote,
     AssembleExternalMatchRequest,
     ExternalMatchResponse,
-    ApiSignedExternalQuote,
-    AtomicMatchApiBundle,
-    OrderBookDepth
-} from './types';
+    ExternalOrder,
+    ExternalQuoteRequest,
+    ExternalQuoteResponse,
+    OrderBookDepth,
+    SignedExternalQuote,
+} from "./types";
+import { VERSION } from "./version";
 
 // Constants for API URLs
 const SEPOLIA_BASE_URL = "https://testnet.auth-server.renegade.fi";
@@ -39,7 +38,7 @@ const REFUND_NATIVE_ETH_QUERY_PARAM = "refund_native_eth";
 
 /**
  * Get the SDK version string.
- * 
+ *
  * @returns The SDK version prefixed with "typescript-v"
  */
 function getSdkVersion(): string {
@@ -50,9 +49,9 @@ function getSdkVersion(): string {
  * Options for requesting a quote.
  */
 export class RequestQuoteOptions {
-    disableGasSponsorship: boolean = false;
+    disableGasSponsorship = false;
     gasRefundAddress?: string;
-    refundNativeEth: boolean = false;
+    refundNativeEth = false;
 
     /**
      * Create a new instance of RequestQuoteOptions.
@@ -107,11 +106,11 @@ export class RequestQuoteOptions {
  * Options for assembling an external match.
  */
 export class AssembleExternalMatchOptions {
-    doGasEstimation: boolean = false;
-    allowShared: boolean = false;
+    doGasEstimation = false;
+    allowShared = false;
     receiverAddress?: string;
     updatedOrder?: ExternalOrder;
-    requestGasSponsorship: boolean = false;
+    requestGasSponsorship = false;
     gasRefundAddress?: string;
 
     /**
@@ -183,7 +182,10 @@ export class AssembleExternalMatchOptions {
         const params = new URLSearchParams();
         if (this.requestGasSponsorship) {
             // We only write this query parameter if it was explicitly set
-            params.set(DISABLE_GAS_SPONSORSHIP_QUERY_PARAM, (!this.requestGasSponsorship).toString());
+            params.set(
+                DISABLE_GAS_SPONSORSHIP_QUERY_PARAM,
+                (!this.requestGasSponsorship).toString(),
+            );
         }
 
         if (this.gasRefundAddress) {
@@ -202,7 +204,7 @@ export class ExternalMatchClientError extends Error {
 
     constructor(message: string, statusCode?: number) {
         super(message);
-        this.name = 'ExternalMatchClientError';
+        this.name = "ExternalMatchClientError";
         this.statusCode = statusCode;
     }
 }
@@ -216,7 +218,7 @@ export class ExternalMatchClient {
 
     /**
      * Initialize a new ExternalMatchClient.
-     * 
+     *
      * @param apiKey The API key for authentication
      * @param apiSecret The API secret for request signing
      * @param baseUrl The base URL of the Renegade API
@@ -228,7 +230,7 @@ export class ExternalMatchClient {
 
     /**
      * Create a new client configured for the Sepolia testnet.
-     * 
+     *
      * @param apiKey The API key for authentication
      * @param apiSecret The API secret for request signing
      * @returns A new ExternalMatchClient configured for Sepolia
@@ -239,7 +241,7 @@ export class ExternalMatchClient {
 
     /**
      * Create a new client configured for mainnet.
-     * 
+     *
      * @param apiKey The API key for authentication
      * @param apiSecret The API secret for request signing
      * @returns A new ExternalMatchClient configured for mainnet
@@ -250,7 +252,7 @@ export class ExternalMatchClient {
 
     /**
      * Request a quote for the given order.
-     * 
+     *
      * @param order The order to request a quote for
      * @returns A promise that resolves to a signed quote if one is available, null otherwise
      * @throws ExternalMatchClientError if the request fails
@@ -261,7 +263,7 @@ export class ExternalMatchClient {
 
     /**
      * Request a quote for the given order with custom options.
-     * 
+     *
      * @param order The order to request a quote for
      * @param options Custom options for the quote request
      * @returns A promise that resolves to a signed quote if one is available, null otherwise
@@ -269,17 +271,21 @@ export class ExternalMatchClient {
      */
     async requestQuoteWithOptions(
         order: ExternalOrder,
-        options: RequestQuoteOptions
+        options: RequestQuoteOptions,
     ): Promise<SignedExternalQuote | null> {
         const request: ExternalQuoteRequest = {
-            external_order: order
+            external_order: order,
         };
 
         const path = options.buildRequestPath();
         const headers = this.getHeaders();
 
         try {
-            const response = await this.httpClient.post<ExternalQuoteResponse>(path, request, headers);
+            const response = await this.httpClient.post<ExternalQuoteResponse>(
+                path,
+                request,
+                headers,
+            );
 
             // Handle 204 No Content (no quotes available)
             if (response.status === 204 || !response.data) {
@@ -290,7 +296,7 @@ export class ExternalMatchClient {
             const signedQuote: SignedExternalQuote = {
                 quote: quoteResp.signed_quote.quote,
                 signature: quoteResp.signed_quote.signature,
-                gas_sponsorship_info: quoteResp.gas_sponsorship_info
+                gas_sponsorship_info: quoteResp.gas_sponsorship_info,
             };
 
             return signedQuote;
@@ -301,15 +307,15 @@ export class ExternalMatchClient {
             }
 
             throw new ExternalMatchClientError(
-                error.message || 'Failed to request quote',
-                error.status
+                error.message || "Failed to request quote",
+                error.status,
             );
         }
     }
 
     /**
      * Assemble a quote into a match bundle with default options.
-     * 
+     *
      * @param quote The signed quote to assemble
      * @returns A promise that resolves to a match response if assembly succeeds, null otherwise
      * @throws ExternalMatchClientError if the request fails
@@ -320,7 +326,7 @@ export class ExternalMatchClient {
 
     /**
      * Assemble a quote into a match bundle with custom options.
-     * 
+     *
      * @param quote The signed quote to assemble
      * @param options Custom options for quote assembly
      * @returns A promise that resolves to a match response if assembly succeeds, null otherwise
@@ -328,7 +334,7 @@ export class ExternalMatchClient {
      */
     async assembleQuoteWithOptions(
         quote: SignedExternalQuote,
-        options: AssembleExternalMatchOptions
+        options: AssembleExternalMatchOptions,
     ): Promise<ExternalMatchResponse | null> {
         const signedQuote: ApiSignedExternalQuote = {
             quote: quote.quote,
@@ -347,7 +353,11 @@ export class ExternalMatchClient {
         const headers = this.getHeaders();
 
         try {
-            const response = await this.httpClient.post<ExternalMatchResponse>(path, request, headers);
+            const response = await this.httpClient.post<ExternalMatchResponse>(
+                path,
+                request,
+                headers,
+            );
 
             // Handle 204 No Content
             if (response.status === 204 || !response.data) {
@@ -362,15 +372,15 @@ export class ExternalMatchClient {
             }
 
             throw new ExternalMatchClientError(
-                error.message || 'Failed to assemble quote',
-                error.status
+                error.message || "Failed to assemble quote",
+                error.status,
             );
         }
     }
 
     /**
      * Get order book depth for a given base token mint.
-     * 
+     *
      * @param mint The base token mint address
      * @returns A promise that resolves to the order book depth
      * @throws ExternalMatchClientError if the request fails
@@ -383,22 +393,22 @@ export class ExternalMatchClient {
             const response = await this.httpClient.get<OrderBookDepth>(path, headers);
             if (response.status !== 200 || !response.data) {
                 throw new ExternalMatchClientError(
-                    'Failed to get order book depth',
-                    response.status
+                    "Failed to get order book depth",
+                    response.status,
                 );
             }
             return response.data;
         } catch (error: any) {
             throw new ExternalMatchClientError(
-                error.message || 'Failed to get order book depth',
-                error.status
+                error.message || "Failed to get order book depth",
+                error.status,
             );
         }
     }
 
     /**
      * Get the headers required for API requests.
-     * 
+     *
      * @returns Headers containing the API key and SDK version
      */
     private getHeaders(): Record<string, string> {
