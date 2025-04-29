@@ -28,7 +28,7 @@ if (!API_KEY || !API_SECRET) {
 // Validate wallet private key
 if (!PRIVATE_KEY) {
     console.error("Error: Missing private key");
-    console.error("Please set PRIVATE_KEY environment variable");
+    console.error("Please set PKEY environment variable");
     process.exit(1);
 }
 

@@ -26,8 +26,8 @@ export interface ApiExternalMatchResult {
 }
 
 export interface FeeTake {
-    relayer_fee: bigint;
-    protocol_fee: bigint;
+    relayer_fee_rate: string;
+    protocol_fee_rate: string;
 }
 
 export interface ExternalOrder {
@@ -122,3 +122,5 @@ export interface OrderBookDepth {
     buy: DepthSideInfo;
     sell: DepthSideInfo;
 }
+
+export * from "./malleableMatch";
