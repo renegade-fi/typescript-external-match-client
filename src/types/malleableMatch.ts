@@ -2,7 +2,7 @@ import { bytesToHex, concatBytes, hexToBytes, numberToBytes } from "viem/utils";
 import { FixedPoint } from "./fixedPoint";
 import {
     type ApiExternalAssetTransfer,
-    type FeeTake,
+    type FeeTakeRate,
     type GasSponsorshipInfo,
     OrderSide,
     type SettlementTransaction,
@@ -245,7 +245,7 @@ interface MalleableAtomicMatchApiBundle {
     /** The match result */
     match_result: ApiBoundedMatchResult;
     /** The fees owed by the external party */
-    fee_rates: FeeTake;
+    fee_rates: FeeTakeRate;
     /** The maximum amount that the external party will receive */
     max_receive: ApiExternalAssetTransfer;
     /** The minimum amount that the external party will receive */
