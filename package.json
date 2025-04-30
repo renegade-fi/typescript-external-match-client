@@ -25,14 +25,14 @@
   "license": "MIT",
   "dependencies": {
     "@noble/hashes": "^1.7.1",
-    "json-bigint": "^1.0.0"
+    "json-bigint": "^1.0.0",
+    "viem": "^2.23.15"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
     "@types/bun": "latest",
     "@types/json-bigint": "^1.0.4",
-    "typescript": "^5",
-    "viem": "^2.23.15"
+    "typescript": "^5"
   },
   "repository": {
     "type": "git",

@@ -1,7 +1,4 @@
-import { concatBytes } from "../utils/data/concat";
-import { hexToBytes, numberToBytes } from "../utils/data/toBytes";
-import { bytesToHex } from "../utils/data/toHex";
-import type { Hex } from "../utils/data/types";
+import { bytesToHex, concatBytes, hexToBytes, numberToBytes } from "viem/utils";
 import { FixedPoint } from "./fixedPoint";
 import {
     type ApiExternalAssetTransfer,
@@ -74,7 +71,7 @@ export class MalleableExternalMatchResponse {
      * Set the calldata to use a given base amount
      */
     public setBaseAmountCalldata(baseAmount: bigint) {
-        const calldataBytes = hexToBytes(this.match_bundle.settlement_tx.data as Hex);
+        const calldataBytes = hexToBytes(this.match_bundle.settlement_tx.data as `0x${string}`);
 
         // Padded to 32 bytes
         const baseAmountBytes = numberToBytes(baseAmount, { size: BASE_AMOUNT_LENGTH });
@@ -168,10 +165,8 @@ export class MalleableExternalMatchResponse {
         preSponsoredAmount -= totalFeeAmount;
 
         // Account for gas sponsorship
-        if (this.gas_sponsored && this.gas_sponsorship_info) {
-            if (!this.gas_sponsorship_info.refund_native_eth) {
-                preSponsoredAmount -= this.gas_sponsorship_info.refund_amount;
-            }
+        if (this.gas_sponsorship_info && !this.gas_sponsorship_info.refund_native_eth) {
+            preSponsoredAmount += this.gas_sponsorship_info.refund_amount;
         }
 
         return preSponsoredAmount;

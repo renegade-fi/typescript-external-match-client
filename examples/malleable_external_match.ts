@@ -50,7 +50,7 @@ const client = ExternalMatchClient.newSepoliaClient(API_KEY, API_SECRET);
 const order: ExternalOrder = {
     quote_mint: "0xdf8d259c04020562717557f2b5a3cf28e92707d1", // USDC
     base_mint: "0xc3414a7ef14aaaa9c4522dfc00a4e66e74e9c25a", // WETH
-    side: OrderSide.BUY,
+    side: OrderSide.SELL,
     quote_amount: BigInt(20_000_000), // 20 USDC
 };
 
