@@ -29,7 +29,7 @@ export type {
     ExternalQuoteResponse,
     AssembleExternalMatchRequest,
     ExternalMatchResponse,
-} from "./src/types";
+} from "./src/types/index";
 
 // Export enums
-export { OrderSide } from "./src/types";
+export { OrderSide } from "./src/types/index";

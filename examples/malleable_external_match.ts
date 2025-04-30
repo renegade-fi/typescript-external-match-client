@@ -1,7 +1,9 @@
 /**
- * Basic example of using the Renegade External Match Client
+ * Fetch a quote from the external api and execute a malleable match
  *
- * This example demonstrates how to create a client, request a quote, assemble a match, and submit the transaction on-chain.
+ * Malleable matches allow the exact swap amount to be determined at settlement
+ * time within a predefined range, offering more flexibility than standard
+ * matches.
  */
 
 import { ExternalMatchClient, OrderSide } from "../index";
@@ -48,7 +50,7 @@ const client = ExternalMatchClient.newSepoliaClient(API_KEY, API_SECRET);
 const order: ExternalOrder = {
     quote_mint: "0xdf8d259c04020562717557f2b5a3cf28e92707d1", // USDC
     base_mint: "0xc3414a7ef14aaaa9c4522dfc00a4e66e74e9c25a", // WETH
-    side: OrderSide.BUY,
+    side: OrderSide.SELL,
     quote_amount: BigInt(20_000_000), // 20 USDC
 };
 
@@ -69,7 +71,6 @@ async function submitTransaction(settlementTx: any): Promise<`0x${string}`> {
     return tx;
 }
 
-// Full example with on-chain submission
 async function fullExample() {
     try {
         // Step 1: Request a quote
@@ -85,14 +86,38 @@ async function fullExample() {
 
         // Step 2: Assemble the quote into a match bundle
         console.log("Assembling match...");
-        const bundle = await client.assembleQuote(quote);
+        const bundle = await client.assembleMalleableQuote(quote);
 
         if (!bundle) {
             console.log("No match available");
             return;
         }
 
-        console.log("Match assembled!");
+        // Print bundle info
+        console.log("Bundle info:");
+        const [minBase, maxBase] = bundle.baseBounds();
+        console.log(`Base bounds: ${minBase} - ${maxBase}`);
+
+        // Pick a random base amount and see the send and receive amounts at that base amount
+        const dummyBaseAmount = randomInRange(minBase, maxBase);
+        const dummySendAmount = bundle.sendAmountAtBase(dummyBaseAmount);
+        const dummyReceiveAmount = bundle.receiveAmountAtBase(dummyBaseAmount);
+        console.log(`Hypothetical base amount: ${dummyBaseAmount}`);
+        console.log(`Hypothetical send amount: ${dummySendAmount}`);
+        console.log(`Hypothetical receive amount: ${dummyReceiveAmount}`);
+
+        // Pick an actual base amount to swap with
+        const swappedBaseAmount = randomInRange(minBase, maxBase);
+
+        // Setting the base amount will return the receive amount at the new base
+        // You can also call sendAmount and receiveAmount to get the amounts at the
+        // currently set base amount
+        const _recv = bundle.setBaseAmount(swappedBaseAmount);
+        const send = bundle.sendAmount();
+        const recv = bundle.receiveAmount();
+        console.log(`Swapped base amount: ${swappedBaseAmount}`);
+        console.log(`Send amount: ${send}`);
+        console.log(`Receive amount: ${recv}`);
 
         // Step 3: Submit the transaction on-chain
         const txHash = await submitTransaction(bundle.match_bundle.settlement_tx);
@@ -103,6 +128,13 @@ async function fullExample() {
     } catch (error) {
         console.error("Error:", error);
     }
+}
+
+/**
+ * Generate a random value in the given range
+ */
+function randomInRange(min: bigint, max: bigint): bigint {
+    return min + BigInt(Math.floor(Math.random() * (Number(max) - Number(min))));
 }
 
 // Run the examples

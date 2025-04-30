@@ -6,16 +6,17 @@
  */
 
 import { RelayerHttpClient } from "./http";
-import type {
-    ApiSignedExternalQuote,
-    AssembleExternalMatchRequest,
-    ExternalMatchResponse,
-    ExternalOrder,
-    ExternalQuoteRequest,
-    ExternalQuoteResponse,
-    OrderBookDepth,
-    SignedExternalQuote,
-} from "./types";
+import {
+    MalleableExternalMatchResponse,
+    type ApiSignedExternalQuote,
+    type AssembleExternalMatchRequest,
+    type ExternalMatchResponse,
+    type ExternalOrder,
+    type ExternalQuoteRequest,
+    type ExternalQuoteResponse,
+    type OrderBookDepth,
+    type SignedExternalQuote,
+} from "./types/index";
 import { VERSION } from "./version";
 
 // Constants for API URLs
@@ -29,6 +30,11 @@ const RENEGADE_SDK_VERSION_HEADER = "x-renegade-sdk-version";
 // API Routes
 const REQUEST_EXTERNAL_QUOTE_ROUTE = "/v0/matching-engine/quote";
 const ASSEMBLE_EXTERNAL_MATCH_ROUTE = "/v0/matching-engine/assemble-external-match";
+/**
+ * The route used to assemble an external match into a malleable bundle
+ */
+const ASSEMBLE_MALLEABLE_EXTERNAL_MATCH_ROUTE =
+    "/v0/matching-engine/assemble-malleable-external-match";
 const ORDER_BOOK_DEPTH_ROUTE = "/v0/order_book/depth";
 
 // Query Parameters
@@ -193,6 +199,42 @@ export class AssembleExternalMatchOptions {
         }
 
         return `${ASSEMBLE_EXTERNAL_MATCH_ROUTE}?${params.toString()}`;
+    }
+}
+
+/**
+ * Options for assembling a malleable external match.
+ */
+export class AssembleMalleableExternalMatchOptions extends AssembleExternalMatchOptions {
+    /**
+     * Create a new instance of AssembleExternalMatchOptions.
+     */
+    static new(): AssembleMalleableExternalMatchOptions {
+        return new AssembleMalleableExternalMatchOptions();
+    }
+    /**
+     * Build the request path with query parameters.
+     */
+    buildRequestPath(): string {
+        // If no query parameters are needed, return the base path
+        if (!this.requestGasSponsorship && !this.gasRefundAddress) {
+            return ASSEMBLE_MALLEABLE_EXTERNAL_MATCH_ROUTE;
+        }
+
+        const params = new URLSearchParams();
+        if (this.requestGasSponsorship) {
+            // We only write this query parameter if it was explicitly set
+            params.set(
+                DISABLE_GAS_SPONSORSHIP_QUERY_PARAM,
+                (!this.requestGasSponsorship).toString(),
+            );
+        }
+
+        if (this.gasRefundAddress) {
+            params.set(GAS_REFUND_ADDRESS_QUERY_PARAM, this.gasRefundAddress);
+        }
+
+        return `${ASSEMBLE_MALLEABLE_EXTERNAL_MATCH_ROUTE}?${params.toString()}`;
     }
 }
 
@@ -365,6 +407,76 @@ export class ExternalMatchClient {
             }
 
             return response.data;
+        } catch (error: any) {
+            // Handle HTTP-related errors from fetch implementation
+            if (error.status === 204) {
+                return null;
+            }
+
+            throw new ExternalMatchClientError(
+                error.message || "Failed to assemble quote",
+                error.status,
+            );
+        }
+    }
+
+    /**
+     * Assemble a quote into a malleable match bundle with default options.
+     *
+     * @param quote The signed quote to assemble
+     * @returns A promise that resolves to a match response if assembly succeeds, null otherwise
+     * @throws ExternalMatchClientError if the request fails
+     */
+    async assembleMalleableQuote(
+        quote: SignedExternalQuote,
+    ): Promise<MalleableExternalMatchResponse | null> {
+        return this.assembleMalleableQuoteWithOptions(
+            quote,
+            AssembleMalleableExternalMatchOptions.new(),
+        );
+    }
+
+    /**
+     * Assemble a quote into a malleable match bundle with custom options.
+     */
+    async assembleMalleableQuoteWithOptions(
+        quote: SignedExternalQuote,
+        options: AssembleMalleableExternalMatchOptions,
+    ): Promise<MalleableExternalMatchResponse | null> {
+        const signedQuote: ApiSignedExternalQuote = {
+            quote: quote.quote,
+            signature: quote.signature,
+        };
+
+        const request: AssembleExternalMatchRequest = {
+            do_gas_estimation: options.doGasEstimation,
+            allow_shared: options.allowShared,
+            receiver_address: options.receiverAddress,
+            signed_quote: signedQuote,
+            updated_order: options.updatedOrder,
+        };
+
+        const path = options.buildRequestPath();
+        const headers = this.getHeaders();
+
+        try {
+            const response = await this.httpClient.post<MalleableExternalMatchResponse>(
+                path,
+                request,
+                headers,
+            );
+
+            // Handle 204 No Content
+            if (response.status === 204 || !response.data) {
+                return null;
+            }
+
+            return new MalleableExternalMatchResponse(
+                response.data.match_bundle,
+                response.data.gas_sponsored,
+                response.data.gas_sponsorship_info,
+                response.data.base_amount,
+            );
         } catch (error: any) {
             // Handle HTTP-related errors from fetch implementation
             if (error.status === 204) {
