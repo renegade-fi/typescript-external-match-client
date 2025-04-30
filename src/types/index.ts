@@ -26,6 +26,11 @@ export interface ApiExternalMatchResult {
 }
 
 export interface FeeTake {
+    relayer_fee: bigint;
+    protocol_fee: bigint;
+}
+
+export interface FeeTakeRate {
     relayer_fee_rate: string;
     protocol_fee_rate: string;
 }
