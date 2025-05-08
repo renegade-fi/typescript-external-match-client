@@ -44,7 +44,7 @@ const walletClient = createWalletClient({
 
 // Create the external match client
 console.log("API KEY", API_KEY);
-const client = ExternalMatchClient.newSepoliaClient(API_KEY, API_SECRET);
+const client = ExternalMatchClient.newArbitrumSepoliaClient(API_KEY, API_SECRET);
 
 // Example order for USDC/WETH pair
 const order: ExternalOrder = {
