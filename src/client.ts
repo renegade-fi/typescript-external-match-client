@@ -7,21 +7,21 @@
 
 import { RelayerHttpClient } from "./http";
 import {
-    MalleableExternalMatchResponse,
     type ApiSignedExternalQuote,
     type AssembleExternalMatchRequest,
     type ExternalMatchResponse,
     type ExternalOrder,
     type ExternalQuoteRequest,
     type ExternalQuoteResponse,
+    MalleableExternalMatchResponse,
     type OrderBookDepth,
     type SignedExternalQuote,
 } from "./types/index";
 import { VERSION } from "./version";
 
 // Constants for API URLs
-const SEPOLIA_BASE_URL = "https://testnet.auth-server.renegade.fi";
-const MAINNET_BASE_URL = "https://mainnet.auth-server.renegade.fi";
+const ARBITRUM_SEPOLIA_BASE_URL = "https://arbitrum-sepolia.auth-server.renegade.fi";
+const ARBITRUM_ONE_BASE_URL = "https://arbitrum-one.auth-server.renegade.fi";
 
 // Header constants
 const RENEGADE_API_KEY_HEADER = "x-renegade-api-key";
@@ -271,25 +271,43 @@ export class ExternalMatchClient {
     }
 
     /**
-     * Create a new client configured for the Sepolia testnet.
+     * Create a new client configured for the Arbitrum Sepolia testnet.
+     *
+     * @deprecated Use {@link ExternalMatchClient.newArbitrumSepoliaClient} instead
+     */
+    static newSepoliaClient(apiKey: string, apiSecret: string): ExternalMatchClient {
+        return ExternalMatchClient.newArbitrumSepoliaClient(apiKey, apiSecret);
+    }
+
+    /**
+     * Create a new client configured for the Arbitrum Sepolia testnet.
      *
      * @param apiKey The API key for authentication
      * @param apiSecret The API secret for request signing
      * @returns A new ExternalMatchClient configured for Sepolia
      */
-    static newSepoliaClient(apiKey: string, apiSecret: string): ExternalMatchClient {
-        return new ExternalMatchClient(apiKey, apiSecret, SEPOLIA_BASE_URL);
+    static newArbitrumSepoliaClient(apiKey: string, apiSecret: string): ExternalMatchClient {
+        return new ExternalMatchClient(apiKey, apiSecret, ARBITRUM_SEPOLIA_BASE_URL);
     }
 
     /**
-     * Create a new client configured for mainnet.
+     * Create a new client configured for the Arbitrum One mainnet.
+     *
+     * @deprecated Use {@link ExternalMatchClient.newArbitrumOneClient} instead
+     */
+    static newMainnetClient(apiKey: string, apiSecret: string): ExternalMatchClient {
+        return ExternalMatchClient.newArbitrumOneClient(apiKey, apiSecret);
+    }
+
+    /**
+     * Create a new client configured for the Arbitrum One mainnet.
      *
      * @param apiKey The API key for authentication
      * @param apiSecret The API secret for request signing
      * @returns A new ExternalMatchClient configured for mainnet
      */
-    static newMainnetClient(apiKey: string, apiSecret: string): ExternalMatchClient {
-        return new ExternalMatchClient(apiKey, apiSecret, MAINNET_BASE_URL);
+    static newArbitrumOneClient(apiKey: string, apiSecret: string): ExternalMatchClient {
+        return new ExternalMatchClient(apiKey, apiSecret, ARBITRUM_ONE_BASE_URL);
     }
 
     /**

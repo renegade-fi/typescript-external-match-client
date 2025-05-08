@@ -20,7 +20,7 @@ if (!API_KEY || !API_SECRET) {
 
 // Create the external match client
 console.log("API KEY", API_KEY);
-const client = ExternalMatchClient.newSepoliaClient(API_KEY, API_SECRET);
+const client = ExternalMatchClient.newArbitrumSepoliaClient(API_KEY, API_SECRET);
 
 // Example base token mint (USDC)
 const WETH = "0xc3414a7ef14aaaa9c4522dfc00a4e66e74e9c25a";
