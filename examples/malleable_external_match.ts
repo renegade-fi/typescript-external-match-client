@@ -13,6 +13,7 @@ import type { ExternalOrder } from "../index";
 import { http, createWalletClient } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { arbitrumSepolia } from "viem/chains";
+import type { MalleableExternalMatchResponse } from "../src/types";
 
 // Get API credentials from environment variables
 const API_KEY = process.env.EXTERNAL_MATCH_KEY || "";
@@ -54,6 +55,71 @@ const order: ExternalOrder = {
 };
 
 /**
+ * Set a random base amount on the bundle and print the results
+ * @param bundle The malleable match bundle
+ */
+function setRandomBaseAmount(bundle: MalleableExternalMatchResponse) {
+    // Print bundle info
+    console.log("Bundle info:");
+    const [minBase, maxBase] = bundle.baseBounds();
+    console.log(`Base bounds: ${minBase} - ${maxBase}`);
+
+    // Pick a random base amount and see the send and receive amounts at that base amount
+    const dummyBaseAmount = randomInRange(minBase, maxBase);
+    const dummySendAmount = bundle.sendAmountAtBase(dummyBaseAmount);
+    const dummyReceiveAmount = bundle.receiveAmountAtBase(dummyBaseAmount);
+    console.log(`Hypothetical base amount: ${dummyBaseAmount}`);
+    console.log(`Hypothetical send amount: ${dummySendAmount}`);
+    console.log(`Hypothetical receive amount: ${dummyReceiveAmount}`);
+
+    // Pick an actual base amount to swap with
+    const swappedBaseAmount = randomInRange(minBase, maxBase);
+
+    // Setting the base amount will return the receive amount at the new base
+    // You can also call sendAmount and receiveAmount to get the amounts at the
+    // currently set base amount
+    bundle.setBaseAmount(swappedBaseAmount);
+    const send = bundle.sendAmount();
+    const recv = bundle.receiveAmount();
+    console.log(`Swapped base amount: ${swappedBaseAmount}`);
+    console.log(`Send amount: ${send}`);
+    console.log(`Receive amount: ${recv}`);
+}
+
+/**
+ * Set a random quote amount on the bundle and print the results
+ * @param bundle The malleable match bundle
+ */
+// biome-ignore lint/correctness/noUnusedVariables: User can choose to use this function in the example
+function setRandomQuoteAmount(bundle: MalleableExternalMatchResponse) {
+    // Print bundle info
+    console.log("Bundle info:");
+    const [minQuote, maxQuote] = bundle.quoteBounds();
+    console.log(`Quote bounds: ${minQuote} - ${maxQuote}`);
+
+    // Pick a random base amount and see the send and receive amounts at that base amount
+    const dummyQuoteAmount = randomInRange(minQuote, maxQuote);
+    const dummySendAmount = bundle.sendAmountAtQuote(dummyQuoteAmount);
+    const dummyReceiveAmount = bundle.receiveAmountAtQuote(dummyQuoteAmount);
+    console.log(`Hypothetical quote amount: ${dummyQuoteAmount}`);
+    console.log(`Hypothetical send amount: ${dummySendAmount}`);
+    console.log(`Hypothetical receive amount: ${dummyReceiveAmount}`);
+
+    // Pick an actual base amount to swap with
+    const swappedQuoteAmount = randomInRange(minQuote, maxQuote);
+
+    // Setting the quote amount will return the receive amount at the new quote
+    // You can also call sendAmount and receiveAmount to get the amounts at the
+    // currently set quote amount
+    bundle.setQuoteAmount(swappedQuoteAmount);
+    const send = bundle.sendAmount();
+    const recv = bundle.receiveAmount();
+    console.log(`Swapped quote amount: ${swappedQuoteAmount}`);
+    console.log(`Send amount: ${send}`);
+    console.log(`Receive amount: ${recv}`);
+}
+
+/**
  * Submit a transaction to the chain
  * @param settlementTx The settlement transaction
  * @returns The transaction hash
@@ -92,31 +158,10 @@ async function fullExample() {
             return;
         }
 
-        // Print bundle info
-        console.log("Bundle info:");
-        const [minBase, maxBase] = bundle.baseBounds();
-        console.log(`Base bounds: ${minBase} - ${maxBase}`);
-
-        // Pick a random base amount and see the send and receive amounts at that base amount
-        const dummyBaseAmount = randomInRange(minBase, maxBase);
-        const dummySendAmount = bundle.sendAmountAtBase(dummyBaseAmount);
-        const dummyReceiveAmount = bundle.receiveAmountAtBase(dummyBaseAmount);
-        console.log(`Hypothetical base amount: ${dummyBaseAmount}`);
-        console.log(`Hypothetical send amount: ${dummySendAmount}`);
-        console.log(`Hypothetical receive amount: ${dummyReceiveAmount}`);
-
-        // Pick an actual base amount to swap with
-        const swappedBaseAmount = randomInRange(minBase, maxBase);
-
-        // Setting the base amount will return the receive amount at the new base
-        // You can also call sendAmount and receiveAmount to get the amounts at the
-        // currently set base amount
-        const _recv = bundle.setBaseAmount(swappedBaseAmount);
-        const send = bundle.sendAmount();
-        const recv = bundle.receiveAmount();
-        console.log(`Swapped base amount: ${swappedBaseAmount}`);
-        console.log(`Send amount: ${send}`);
-        console.log(`Receive amount: ${recv}`);
+        // Set a base amount on the bundle
+        // Alternatively, you can set a quote amount on the bundle - see
+        // `setRandomQuoteAmount`
+        setRandomBaseAmount(bundle);
 
         // Step 3: Submit the transaction on-chain
         const txHash = await submitTransaction(bundle.match_bundle.settlement_tx);
