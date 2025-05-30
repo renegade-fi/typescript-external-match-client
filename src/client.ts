@@ -22,6 +22,8 @@ import { VERSION } from "./version";
 // Constants for API URLs
 const ARBITRUM_SEPOLIA_BASE_URL = "https://arbitrum-sepolia.auth-server.renegade.fi";
 const ARBITRUM_ONE_BASE_URL = "https://arbitrum-one.auth-server.renegade.fi";
+const BASE_SEPOLIA_BASE_URL = "https://base-sepolia.auth-server.renegade.fi";
+const BASE_MAINNET_BASE_URL = "https://base-mainnet.auth-server.renegade.fi";
 
 // Header constants
 const RENEGADE_API_KEY_HEADER = "x-renegade-api-key";
@@ -291,6 +293,17 @@ export class ExternalMatchClient {
     }
 
     /**
+     * Create a new client configured for the Base Sepolia testnet.
+     *
+     * @param apiKey The API key for authentication
+     * @param apiSecret The API secret for request signing
+     * @returns A new ExternalMatchClient configured for Sepolia
+     */
+    static newBaseSepoliaClient(apiKey: string, apiSecret: string): ExternalMatchClient {
+        return new ExternalMatchClient(apiKey, apiSecret, BASE_SEPOLIA_BASE_URL);
+    }
+
+    /**
      * Create a new client configured for the Arbitrum One mainnet.
      *
      * @deprecated Use {@link ExternalMatchClient.newArbitrumOneClient} instead
@@ -308,6 +321,17 @@ export class ExternalMatchClient {
      */
     static newArbitrumOneClient(apiKey: string, apiSecret: string): ExternalMatchClient {
         return new ExternalMatchClient(apiKey, apiSecret, ARBITRUM_ONE_BASE_URL);
+    }
+
+    /**
+     * Create a new client configured for the Base mainnet.
+     *
+     * @param apiKey The API key for authentication
+     * @param apiSecret The API secret for request signing
+     * @returns A new ExternalMatchClient configured for mainnet
+     */
+    static newBaseMainnetClient(apiKey: string, apiSecret: string): ExternalMatchClient {
+        return new ExternalMatchClient(apiKey, apiSecret, BASE_MAINNET_BASE_URL);
     }
 
     /**
