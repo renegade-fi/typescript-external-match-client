@@ -54,7 +54,7 @@ export interface HttpResponse<T = any> {
  */
 export class RelayerHttpClient {
     private baseUrl: string;
-    private authKey: Uint8Array;
+    private authKey?: Uint8Array;
     private defaultHeaders: Record<string, string>;
 
     /**
@@ -63,9 +63,11 @@ export class RelayerHttpClient {
      * @param baseUrl The base URL of the relayer API
      * @param authKey The base64-encoded authentication key for request signing
      */
-    constructor(baseUrl: string, authKey: string) {
+    constructor(baseUrl: string, authKey?: string) {
         this.baseUrl = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
-        this.authKey = this.decodeBase64(authKey);
+        if (authKey) {
+            this.authKey = this.decodeBase64(authKey);
+        }
         this.defaultHeaders = {
             "Content-Type": "application/json",
         };
@@ -121,7 +123,10 @@ export class RelayerHttpClient {
 
         // Prepare headers, and add authentication headers
         const headers = { ...this.defaultHeaders, ...customHeaders };
-        const fullHeaders = this.addAuthHeaders(url.pathname + url.search, headers, data);
+        let fullHeaders = headers;
+        if (this.authKey) {
+            fullHeaders = this.addAuthHeaders(url.pathname + url.search, headers, data);
+        }
 
         // Prepare request body
         let body: string | undefined;
@@ -193,6 +198,10 @@ export class RelayerHttpClient {
         headers: Record<string, string>,
         data?: any,
     ): Uint8Array {
+        if (!this.authKey) {
+            throw new Error("Auth key is not set");
+        }
+
         // Initialize MAC with auth key
         const mac = hmac.create(sha256, this.authKey);
 
