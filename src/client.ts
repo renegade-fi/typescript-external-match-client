@@ -16,6 +16,9 @@ import {
     MalleableExternalMatchResponse,
     type OrderBookDepth,
     type SignedExternalQuote,
+    type SupportedTokensResponse,
+    type TokenPrice,
+    type TokenPricesResponse,
 } from "./types/index";
 import { VERSION } from "./version";
 
@@ -24,6 +27,11 @@ const ARBITRUM_SEPOLIA_BASE_URL = "https://arbitrum-sepolia.auth-server.renegade
 const ARBITRUM_ONE_BASE_URL = "https://arbitrum-one.auth-server.renegade.fi";
 const BASE_SEPOLIA_BASE_URL = "https://base-sepolia.auth-server.renegade.fi";
 const BASE_MAINNET_BASE_URL = "https://base-mainnet.auth-server.renegade.fi";
+
+const ARBITRUM_SEPOLIA_RELAYER_URL = "https://arbitrum-sepolia.relayer.renegade.fi";
+const ARBITRUM_ONE_RELAYER_URL = "https://arbitrum-one.relayer.renegade.fi";
+const BASE_SEPOLIA_RELAYER_URL = "https://base-sepolia.relayer.renegade.fi";
+const BASE_MAINNET_RELAYER_URL = "https://base-mainnet.relayer.renegade.fi";
 
 // Header constants
 const RENEGADE_API_KEY_HEADER = "x-renegade-api-key";
@@ -38,6 +46,10 @@ const ASSEMBLE_EXTERNAL_MATCH_ROUTE = "/v0/matching-engine/assemble-external-mat
 const ASSEMBLE_MALLEABLE_EXTERNAL_MATCH_ROUTE =
     "/v0/matching-engine/assemble-malleable-external-match";
 const ORDER_BOOK_DEPTH_ROUTE = "/v0/order_book/depth";
+/** Returns the supported tokens list */
+const SUPPORTED_TOKENS_ROUTE = "/v0/supported-tokens";
+/** Returns the token prices */
+const TOKEN_PRICES_ROUTE = "/v0/token-prices";
 
 // Query Parameters
 const DISABLE_GAS_SPONSORSHIP_QUERY_PARAM = "disable_gas_sponsorship";
@@ -259,6 +271,7 @@ export class ExternalMatchClientError extends Error {
 export class ExternalMatchClient {
     private apiKey: string;
     private httpClient: RelayerHttpClient;
+    private relayerHttpClient: RelayerHttpClient;
 
     /**
      * Initialize a new ExternalMatchClient.
@@ -267,9 +280,10 @@ export class ExternalMatchClient {
      * @param apiSecret The API secret for request signing
      * @param baseUrl The base URL of the Renegade API
      */
-    constructor(apiKey: string, apiSecret: string, baseUrl: string) {
+    constructor(apiKey: string, apiSecret: string, baseUrl: string, relayerUrl: string) {
         this.apiKey = apiKey;
         this.httpClient = new RelayerHttpClient(baseUrl, apiSecret);
+        this.relayerHttpClient = new RelayerHttpClient(relayerUrl);
     }
 
     /**
@@ -286,10 +300,11 @@ export class ExternalMatchClient {
      *
      * @param apiKey The API key for authentication
      * @param apiSecret The API secret for request signing
+     * @param relayerUrl The relayer URL for the client
      * @returns A new ExternalMatchClient configured for Sepolia
      */
     static newArbitrumSepoliaClient(apiKey: string, apiSecret: string): ExternalMatchClient {
-        return new ExternalMatchClient(apiKey, apiSecret, ARBITRUM_SEPOLIA_BASE_URL);
+        return new ExternalMatchClient(apiKey, apiSecret, ARBITRUM_SEPOLIA_BASE_URL, ARBITRUM_SEPOLIA_RELAYER_URL);
     }
 
     /**
@@ -300,7 +315,7 @@ export class ExternalMatchClient {
      * @returns A new ExternalMatchClient configured for Sepolia
      */
     static newBaseSepoliaClient(apiKey: string, apiSecret: string): ExternalMatchClient {
-        return new ExternalMatchClient(apiKey, apiSecret, BASE_SEPOLIA_BASE_URL);
+        return new ExternalMatchClient(apiKey, apiSecret, BASE_SEPOLIA_BASE_URL, BASE_SEPOLIA_RELAYER_URL);
     }
 
     /**
@@ -320,7 +335,7 @@ export class ExternalMatchClient {
      * @returns A new ExternalMatchClient configured for mainnet
      */
     static newArbitrumOneClient(apiKey: string, apiSecret: string): ExternalMatchClient {
-        return new ExternalMatchClient(apiKey, apiSecret, ARBITRUM_ONE_BASE_URL);
+        return new ExternalMatchClient(apiKey, apiSecret, ARBITRUM_ONE_BASE_URL, ARBITRUM_ONE_RELAYER_URL);
     }
 
     /**
@@ -331,7 +346,7 @@ export class ExternalMatchClient {
      * @returns A new ExternalMatchClient configured for mainnet
      */
     static newBaseMainnetClient(apiKey: string, apiSecret: string): ExternalMatchClient {
-        return new ExternalMatchClient(apiKey, apiSecret, BASE_MAINNET_BASE_URL);
+        return new ExternalMatchClient(apiKey, apiSecret, BASE_MAINNET_BASE_URL, BASE_MAINNET_RELAYER_URL);
     }
 
     /**
@@ -560,6 +575,50 @@ export class ExternalMatchClient {
         }
     }
 
+    /**
+     * Get a list of supported tokens for external matches
+     */
+    async getSupportedTokens(): Promise<SupportedTokensResponse> {
+        const path = `${SUPPORTED_TOKENS_ROUTE}`;
+        const headers = this.getHeaders();
+
+        try {
+            const response = await this.relayerHttpClient.get<SupportedTokensResponse>(path, headers);
+            if (response.status !== 200 || !response.data) {
+                throw new ExternalMatchClientError("Failed to get supported tokens", response.status);
+            }
+            return response.data;
+        } catch (error: any) {
+            throw new ExternalMatchClientError(
+                error.message || "Failed to get supported tokens",
+                error.status,
+            );
+        }
+    }
+
+    /**
+     * Get a list of token prices
+     */
+    async getTokenPrices(): Promise<TokenPricesResponse> {
+        const path = `${TOKEN_PRICES_ROUTE}`;
+        const headers = this.getHeaders();
+
+        try {
+            const response = await this.relayerHttpClient.get<TokenPricesResponse>(path, headers);
+            if (response.status !== 200 || !response.data) {
+                throw new ExternalMatchClientError("Failed to get token prices", response.status);
+            }
+            return {
+                ...response.data,
+                token_prices: response.data.token_prices.map((tokenPrice: TokenPrice) => ({ ...tokenPrice, price: Number.parseFloat(tokenPrice.price.toString()) })),
+            };
+        } catch (error: any) {
+            throw new ExternalMatchClientError(
+                error.message || "Failed to get token prices",
+                error.status,
+            );
+        }
+    }
     /**
      * Get the headers required for API requests.
      *

@@ -128,4 +128,23 @@ export interface OrderBookDepth {
     sell: DepthSideInfo;
 }
 
+export interface ApiToken {
+    address: string;
+    symbol: string;
+}
+
+export interface SupportedTokensResponse {
+    tokens: ApiToken[];
+}
+
+export interface TokenPrice {
+    base_token: string;
+    quote_token: string;
+    price: number;
+}
+
+export interface TokenPricesResponse {
+    token_prices: TokenPrice[];
+}
+
 export * from "./malleableMatch";
